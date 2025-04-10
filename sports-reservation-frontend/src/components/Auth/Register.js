@@ -1,9 +1,9 @@
 // src/components/Auth/Register.js
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
 
-const Register = () => {
+const Register = ({ theme, toggleTheme }) => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -38,111 +38,97 @@ const Register = () => {
   };
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-8">
-          <div className="card">
-            <div className="card-header">Register</div>
-            <div className="card-body">
-              {errors.non_field_errors && (
-                <div className="alert alert-danger">
-                  {errors.non_field_errors.map((error, index) => (
-                    <p key={index} className="mb-0">{error}</p>
-                  ))}
-                </div>
-              )}
-              
-              <form onSubmit={handleSubmit}>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="first_name" className="form-label">First Name</label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.first_name ? 'is-invalid' : ''}`}
-                      id="first_name"
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleChange}
-                    />
-                    {errors.first_name && <div className="invalid-feedback">{errors.first_name}</div>}
-                  </div>
-                  
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="last_name" className="form-label">Last Name</label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.last_name ? 'is-invalid' : ''}`}
-                      id="last_name"
-                      name="last_name"
-                      value={formData.last_name}
-                      onChange={handleChange}
-                    />
-                    {errors.last_name && <div className="invalid-feedback">{errors.last_name}</div>}
-                  </div>
-                </div>
+    <div className={`flex flex-col items-center justify-center min-h-screen ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-200 text-black'}`}>
+      <h1 className="text-4xl font-bold mb-6">Create Account</h1>
+      <button onClick={toggleTheme} className="absolute top-4 right-4 p-2 bg-gray-400 rounded">
+        {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+      </button>
 
-                <div className="mb-3">
-                  <label htmlFor="username" className="form-label">Username</label>
-                  <input
-                    type="text"
-                    className={`form-control ${errors.username ? 'is-invalid' : ''}`}
-                    id="username"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    required
-                  />
-                  {errors.username && <div className="invalid-feedback">{errors.username}</div>}
-                </div>
+      <form onSubmit={handleSubmit} className={`w-[90%] max-w-xl p-8 rounded-lg shadow-lg border-2 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
+        {errors.non_field_errors && (
+          <div className="text-red-500 mb-3 text-center">
+            {errors.non_field_errors.map((err, i) => <p key={i}>{err}</p>)}
+          </div>
+        )}
 
-                <div className="mb-3">
-                  <label htmlFor="email" className="form-label">Email</label>
-                  <input
-                    type="email"
-                    className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                  {errors.email && <div className="invalid-feedback">{errors.email}</div>}
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <input
+              type="text"
+              name="first_name"
+              placeholder="First Name"
+              value={formData.first_name}
+              onChange={handleChange}
+              className={`w-full p-3 border rounded bg-transparent ${errors.first_name ? 'border-red-500' : ''}`}
+            />
+            {errors.first_name && <p className="text-red-500 text-sm">{errors.first_name}</p>}
+          </div>
 
-                <div className="mb-3">
-                  <label htmlFor="password1" className="form-label">Password</label>
-                  <input
-                    type="password"
-                    className={`form-control ${errors.password1 ? 'is-invalid' : ''}`}
-                    id="password1"
-                    name="password1"
-                    value={formData.password1}
-                    onChange={handleChange}
-                    required
-                  />
-                  {errors.password1 && <div className="invalid-feedback">{errors.password1}</div>}
-                </div>
-
-                <div className="mb-3">
-                  <label htmlFor="password2" className="form-label">Confirm Password</label>
-                  <input
-                    type="password"
-                    className={`form-control ${errors.password2 ? 'is-invalid' : ''}`}
-                    id="password2"
-                    name="password2"
-                    value={formData.password2}
-                    onChange={handleChange}
-                    required
-                  />
-                  {errors.password2 && <div className="invalid-feedback">{errors.password2}</div>}
-                </div>
-
-                <button type="submit" className="btn btn-primary">Register</button>
-              </form>
-            </div>
+          <div>
+            <input
+              type="text"
+              name="last_name"
+              placeholder="Last Name"
+              value={formData.last_name}
+              onChange={handleChange}
+              className={`w-full p-3 border rounded bg-transparent ${errors.last_name ? 'border-red-500' : ''}`}
+            />
+            {errors.last_name && <p className="text-red-500 text-sm">{errors.last_name}</p>}
           </div>
         </div>
-      </div>
+
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          value={formData.username}
+          onChange={handleChange}
+          required
+          className={`w-full mt-4 p-3 border rounded bg-transparent ${errors.username ? 'border-red-500' : ''}`}
+        />
+        {errors.username && <p className="text-red-500 text-sm">{errors.username}</p>}
+
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          className={`w-full mt-4 p-3 border rounded bg-transparent ${errors.email ? 'border-red-500' : ''}`}
+        />
+        {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+
+        <input
+          type="password"
+          name="password1"
+          placeholder="Password"
+          value={formData.password1}
+          onChange={handleChange}
+          required
+          className={`w-full mt-4 p-3 border rounded bg-transparent ${errors.password1 ? 'border-red-500' : ''}`}
+        />
+        {errors.password1 && <p className="text-red-500 text-sm">{errors.password1}</p>}
+
+        <input
+          type="password"
+          name="password2"
+          placeholder="Confirm Password"
+          value={formData.password2}
+          onChange={handleChange}
+          required
+          className={`w-full mt-4 p-3 border rounded bg-transparent ${errors.password2 ? 'border-red-500' : ''}`}
+        />
+        {errors.password2 && <p className="text-red-500 text-sm">{errors.password2}</p>}
+
+        <button type="submit" className="mt-6 w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600">
+          Register
+        </button>
+
+        <p className="mt-4 text-center">
+          Already have an account? <Link to="/login" className="text-blue-500">Login</Link>
+        </p>
+      </form>
     </div>
   );
 };
