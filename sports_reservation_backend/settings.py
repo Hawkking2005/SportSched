@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from django.utils import timezone
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,7 +28,14 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 USE_TZ = True
-TIME_ZONE = 'Asia/Kolkata'  # Replace with your local timezone if needed
+TIME_ZONE = 'Asia/Kolkata'  # Set to India timezone
+
+# Ensure these settings are consistent
+USE_L10N = True
+USE_I18N = True
+
+# Force Django to use the timezone specified
+timezone.activate('Asia/Kolkata')
 
 
 # Application definition
@@ -65,6 +73,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'reservations.middleware.TimezoneMiddleware',
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",

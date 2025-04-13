@@ -6,26 +6,38 @@ const MyReservations = () => {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchReservations = async () => {
-      try {
-        const response = await api.get('reservations/');
-        setReservations(response.data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching reservations:', error);
-        setLoading(false);
-      }
-    };
+  const fetchReservations = async () => {
+    try {
+      const response = await api.get('reservations/');
+      // Filter out cancelled reservations
+      const activeReservations = response.data.filter(res => !res.is_cancelled);
+      setReservations(activeReservations);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching reservations:', error);
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchReservations();
   }, []);
 
   const handleCancelReservation = async (id) => {
     if (window.confirm('Are you sure you want to cancel this reservation?')) {
       try {
-        await api.delete(`reservations/${id}/`);
-        setReservations(reservations.filter(reservation => reservation.id !== id));
+        // Call the cancel endpoint
+        const response = await api.delete(`reservations/${id}/`);
+        
+        if (response.status === 200) {
+          // Remove the cancelled reservation from the state
+          setReservations(prevReservations => 
+            prevReservations.filter(res => res.id !== id)
+          );
+          
+          // Show success message
+          alert('Reservation cancelled successfully');
+        }
       } catch (error) {
         console.error('Error canceling reservation:', error);
         alert('Failed to cancel reservation. Please try again.');

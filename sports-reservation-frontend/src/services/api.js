@@ -66,7 +66,15 @@ export const getMyReservations = async () => {
 };
 
 export const cancelReservation = async (id) => {
-  return await api.delete(`reservations/${id}/`);
+  console.log(`API: Cancelling reservation ${id}`);
+  try {
+    const response = await api.delete(`reservations/${id}/`);
+    console.log(`API: Cancellation response:`, response);
+    return response;
+  } catch (error) {
+    console.error(`API: Cancellation error:`, error);
+    throw error;
+  }
 };
 
 export default api;

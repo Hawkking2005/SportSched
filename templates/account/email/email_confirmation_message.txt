@@ -1,0 +1,16 @@
+{% load account %}
+{% user_display user as user_display %}
+{% autoescape off %}
+Hello {{ user_display }}!
+
+Please confirm your email address for your Sports Facility Account by clicking the link below:
+
+{{ activate_url }}
+
+This link will expire in {{ expiry_days }} days.
+
+If you did not sign up for this account, you can ignore this email.
+
+Thank you,
+Sports Facility Team
+{% endautoescape %} 

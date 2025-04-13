@@ -24,8 +24,9 @@ class TimeSlotViewSet(viewsets.ModelViewSet):
                 facility = SportFacility.objects.get(id=facility_id)
                 date = parse_date(date_str)
                 if date:
-                    # Auto-generate slots for the given date
-                    facility.generate_time_slots(for_date=date)
+                    # Only generate slots if none exist for this date
+                    if not TimeSlot.objects.filter(facility=facility, date=date).exists():
+                        facility.generate_time_slots(for_date=date)
                     return TimeSlot.objects.filter(facility=facility, date=date)
             except SportFacility.DoesNotExist:
                 return TimeSlot.objects.none()
@@ -70,7 +71,19 @@ class ReservationViewSet(viewsets.ModelViewSet):
             )
 
     def destroy(self, request, *args, **kwargs):
-        """Cancel reservation and make slot available again"""
-        reservation = self.get_object()
-        reservation.cancel()  # Custom model method updates availability
-        return Response({"detail": "Reservation cancelled."}, status=status.HTTP_204_NO_CONTENT)
+        """Delete reservation and make slot available again"""
+        try:
+            reservation = self.get_object()
+            time_slot = reservation.time_slot
+            
+            # Delete the reservation
+            reservation.delete()
+            
+            # Update the time slot availability
+            time_slot.is_available = True
+            time_slot.save()
+            
+            return Response({"detail": "Reservation deleted successfully."}, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

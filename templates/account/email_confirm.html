@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Confirm Email Address</h1>
+    
+    {% if confirmation %}
+        <p>Please confirm that <a href="mailto:{{ email }}">{{ email }}</a> is your email address.</p>
+        
+        <form method="post" action="{% url 'rest_verify_email' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Confirm</button>
+        </form>
+    {% else %}
+        <p>This email confirmation link has expired or is invalid. Please request a new confirmation email.</p>
+    {% endif %}
+</div>
+{% endblock %} 
