@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from .models import SportFacility, TimeSlot, Reservation
 from .serializers import SportFacilitySerializer, TimeSlotSerializer, ReservationSerializer
 from django.utils.dateparse import parse_date
+from django.utils import timezone
 
 class SportFacilityViewSet(viewsets.ModelViewSet):
     queryset = SportFacility.objects.all()
@@ -15,22 +16,32 @@ class TimeSlotViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        """Auto-generate slots and filter by facility and date"""
+        """Auto-generate slots and filter by facility, date, and current time"""
         facility_id = self.request.query_params.get('facility_id')
         date_str = self.request.query_params.get('date')
+        queryset = TimeSlot.objects.none()
 
         if facility_id and date_str:
             try:
                 facility = SportFacility.objects.get(id=facility_id)
-                date = parse_date(date_str)
-                if date:
-                    # Auto-generate slots for the given date
-                    facility.generate_time_slots(for_date=date)
-                    return TimeSlot.objects.filter(facility=facility, date=date)
+                requested_date = parse_date(date_str)
+                if requested_date:
+                    # Generate slots if they don't exist for this date
+                    if not TimeSlot.objects.filter(facility=facility, date=requested_date).exists():
+                        facility.generate_time_slots(for_date=requested_date)
+
+                    # Initial filter by facility and date
+                    queryset = TimeSlot.objects.filter(facility=facility, date=requested_date)
+
+                    # If the requested date is today, filter out past slots
+                    now = timezone.localtime()
+                    if requested_date == now.date():
+                        queryset = queryset.filter(start_time__gte=now.time())
+
             except SportFacility.DoesNotExist:
-                return TimeSlot.objects.none()
-        
-        return TimeSlot.objects.none()
+                pass
+
+        return queryset
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
@@ -70,7 +81,19 @@ class ReservationViewSet(viewsets.ModelViewSet):
             )
 
     def destroy(self, request, *args, **kwargs):
-        """Cancel reservation and make slot available again"""
-        reservation = self.get_object()
-        reservation.cancel()  # Custom model method updates availability
-        return Response({"detail": "Reservation cancelled."}, status=status.HTTP_204_NO_CONTENT)
+        """Delete reservation and make slot available again"""
+        try:
+            reservation = self.get_object()
+            time_slot = reservation.time_slot
+            
+            # Delete the reservation
+            reservation.delete()
+            
+            # Update the time slot availability
+            time_slot.is_available = True
+            time_slot.save()
+            
+            return Response({"detail": "Reservation deleted successfully."}, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

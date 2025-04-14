@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from django.utils import timezone
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,12 +28,20 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 USE_TZ = True
-TIME_ZONE = 'Asia/Kolkata'  # Replace with your local timezone if needed
+TIME_ZONE = 'Asia/Kolkata'  # Set to India timezone
+
+# Ensure these settings are consistent
+USE_L10N = True
+USE_I18N = True
+
+# Force Django to use the timezone specified
+timezone.activate('Asia/Kolkata')
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -65,6 +74,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'reservations.middleware.TimezoneMiddleware',
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -104,6 +114,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sports_reservation_backend.wsgi.application'
 
+# Add ASGI application setting
+ASGI_APPLICATION = 'sports_reservation_backend.asgi.application'
+
+# Channel Layers Configuration (using in-memory for development)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -140,7 +159,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 

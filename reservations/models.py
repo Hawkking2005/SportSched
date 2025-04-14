@@ -8,8 +8,8 @@ class SportFacility(models.Model):
     description = models.TextField()
     facility_type = models.CharField(max_length=50)
     image = models.ImageField(upload_to='facilities/', null=True, blank=True)
-    opening_time = models.TimeField(default=time(8, 0))  # 8:00 AM
-    closing_time = models.TimeField(default=time(22, 0)) # 10:00 PM
+    opening_time = models.TimeField(default=time(12, 0))  # 12:00 PM
+    closing_time = models.TimeField(default=time(20, 0))  # 8:00 PM
     slot_duration = models.PositiveIntegerField(default=60)  # in minutes
 
     def __str__(self):
@@ -17,51 +17,78 @@ class SportFacility(models.Model):
 
     def generate_time_slots(self, for_date=None):
         """
-        Generate time slots for the given date. If not provided, defaults to today.
-        Avoids creating duplicates and updates availability.
+        Generate time slots from 12 PM to 8 PM for the given date.
+        If not provided, defaults to today.
         """
         if for_date is None:
-            for_date = date.today()
+            for_date = timezone.localtime().date()
 
         # Avoid generating for past dates
-        if for_date < date.today():
+        current_time = timezone.localtime()
+        if for_date < current_time.date():
             return []
 
-        now = timezone.now()
-        start_time = self.opening_time
+        # Set fixed opening (12 PM) and closing (8 PM) times
+        start_time = time(12, 0)  # 12:00 PM
+        end_time_limit = time(20, 0)  # 8:00 PM
 
-        if for_date == now.date():
-            # Round up current time to the next slot boundary
-            start_time = now.time()
-            minutes = (self.slot_duration - (now.minute % self.slot_duration)) % self.slot_duration
-            start_time_dt = datetime.combine(for_date, start_time) + timedelta(minutes=minutes)
-            start_time = max(start_time_dt.time(), self.opening_time)
+        # If it's today, adjust start time if current time is past noon
+        if for_date == current_time.date():
+            if current_time.time() >= end_time_limit:
+                return []  # Past closing time, don't create any slots
+            if current_time.time() > start_time:
+                # Round up to the next slot boundary
+                minutes_past_hour = current_time.minute
+                if minutes_past_hour > 0:
+                    minutes_to_next_slot = self.slot_duration - (minutes_past_hour % self.slot_duration)
+                    start_time_dt = current_time + timedelta(minutes=minutes_to_next_slot)
+                    start_time = start_time_dt.time()
+                else:
+                    start_time = current_time.time()
 
         slots = []
-        current_time = start_time
+        current_time_dt = datetime.combine(for_date, start_time)
 
-        while (datetime.combine(for_date, current_time) + 
-               timedelta(minutes=self.slot_duration)).time() <= self.closing_time:
-
-            end_time = (datetime.combine(for_date, current_time) +
-                        timedelta(minutes=self.slot_duration)).time()
+        while current_time_dt.time() < end_time_limit:
+            slot_end_time = (current_time_dt + timedelta(minutes=self.slot_duration)).time()
+            
+            if slot_end_time > end_time_limit:
+                break
 
             slot, created = TimeSlot.objects.get_or_create(
                 facility=self,
                 date=for_date,
-                start_time=current_time,
-                end_time=end_time,
+                start_time=current_time_dt.time(),
+                end_time=slot_end_time,
                 defaults={'is_available': True}
             )
 
-            # Update availability based on current reservations
-            slot.is_available = not slot.reservations.filter(is_cancelled=False).exists()
-            slot.save()
+            # Update availability based on current time
+            if created:
+                slot_datetime = timezone.make_aware(datetime.combine(for_date, slot.start_time))
+                if slot_datetime < timezone.localtime():
+                    slot.is_available = False
+                    slot.save()
 
             slots.append(slot)
-            current_time = end_time
+            current_time_dt += timedelta(minutes=self.slot_duration)
 
         return slots
+
+    def clean_past_slots(self):
+        """Remove time slots that are in the past"""
+        current_time = timezone.localtime()
+        TimeSlot.objects.filter(
+            facility=self,
+            date__lt=current_time.date()
+        ).delete()
+        
+        # Clean today's past slots
+        TimeSlot.objects.filter(
+            facility=self,
+            date=current_time.date(),
+            end_time__lt=current_time.time()
+        ).delete()
 
 class TimeSlot(models.Model):
     facility = models.ForeignKey(SportFacility, on_delete=models.CASCADE, related_name='time_slots')
@@ -83,11 +110,20 @@ class TimeSlot(models.Model):
         slot_datetime = timezone.make_aware(
             datetime.combine(self.date, self.start_time)
         )
-        return slot_datetime < timezone.now()
+        return slot_datetime < timezone.localtime()
 
     def update_availability(self):
-        """Update availability based on reservation status"""
-        self.is_available = not self.reservations.filter(is_cancelled=False).exists()
+        """Update availability based on reservation status and time"""
+        current_time = timezone.localtime()
+        slot_datetime = timezone.make_aware(datetime.combine(self.date, self.start_time))
+        
+        # If the slot is in the past, it's not available
+        if slot_datetime < current_time:
+            self.is_available = False
+        else:
+            # Otherwise, check for active reservations
+            self.is_available = not self.reservations.filter(is_cancelled=False).exists()
+        
         self.save()
 
 class Reservation(models.Model):
@@ -104,8 +140,9 @@ class Reservation(models.Model):
         return f"{self.user.username} - {self.time_slot} ({status})"
 
     def cancel(self):
-        """Cancel this reservation and update the slot availability"""
-        if not self.is_cancelled:
-            self.is_cancelled = True
-            self.save()
-            self.time_slot.update_availability()
+        """Cancel this reservation by deleting it and updating the slot availability"""
+        time_slot = self.time_slot
+        # Delete the reservation
+        self.delete()
+        # Update the time slot availability
+        time_slot.update_availability()
