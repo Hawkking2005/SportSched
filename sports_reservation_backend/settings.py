@@ -41,6 +41,7 @@ timezone.activate('Asia/Kolkata')
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -113,6 +114,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sports_reservation_backend.wsgi.application'
 
+# Add ASGI application setting
+ASGI_APPLICATION = 'sports_reservation_backend.asgi.application'
+
+# Channel Layers Configuration (using in-memory for development)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -149,7 +159,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
