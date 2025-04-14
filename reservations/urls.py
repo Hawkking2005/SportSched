@@ -1,8 +1,13 @@
-from django.urls import path
-from .views import CustomRegistrationView, VerifyEmailView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import SportFacilityViewSet, CourtViewSet, TimeSlotViewSet, ReservationViewSet
+
+router = DefaultRouter()
+router.register(r'facilities', SportFacilityViewSet)
+router.register(r'courts', CourtViewSet)
+router.register(r'timeslots', TimeSlotViewSet)
+router.register(r'reservations', ReservationViewSet)
 
 urlpatterns = [
-    # ... your existing urls ...
-    path('register/', CustomRegistrationView.as_view(), name='custom-registration'),
-    path('verify-email/<int:user_id>/', VerifyEmailView.as_view(), name='verify-email'),
+    path('', include(router.urls)),
 ] 

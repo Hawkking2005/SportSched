@@ -4,10 +4,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from reservations.views import SportFacilityViewSet, TimeSlotViewSet, ReservationViewSet
+from reservations.views import SportFacilityViewSet, CourtViewSet, TimeSlotViewSet, ReservationViewSet
 
 router = DefaultRouter()
 router.register(r'facilities', SportFacilityViewSet)
+router.register(r'courts', CourtViewSet)
 router.register(r'timeslots', TimeSlotViewSet)
 router.register(r'reservations', ReservationViewSet)
 

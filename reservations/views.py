@@ -1,14 +1,34 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from .models import SportFacility, TimeSlot, Reservation
-from .serializers import SportFacilitySerializer, TimeSlotSerializer, ReservationSerializer
+from rest_framework.decorators import action
+from .models import SportFacility, Court, TimeSlot, Reservation
+from .serializers import SportFacilitySerializer, CourtSerializer, TimeSlotSerializer, ReservationSerializer
 from django.utils.dateparse import parse_date
 from django.utils import timezone
+from rest_framework import serializers
 
 class SportFacilityViewSet(viewsets.ModelViewSet):
     queryset = SportFacility.objects.all()
     serializer_class = SportFacilitySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    @action(detail=True, methods=['get'])
+    def courts(self, request, pk=None):
+        facility = self.get_object()
+        courts = facility.courts.all()
+        serializer = CourtSerializer(courts, many=True)
+        return Response(serializer.data)
+
+class CourtViewSet(viewsets.ModelViewSet):
+    queryset = Court.objects.all()
+    serializer_class = CourtSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        facility_id = self.request.query_params.get('facility_id')
+        if facility_id:
+            return Court.objects.filter(facility_id=facility_id)
+        return Court.objects.all()
 
 class TimeSlotViewSet(viewsets.ModelViewSet):
     queryset = TimeSlot.objects.all()
@@ -16,29 +36,29 @@ class TimeSlotViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        """Auto-generate slots and filter by facility, date, and current time"""
-        facility_id = self.request.query_params.get('facility_id')
+        """Auto-generate slots and filter by court, date, and current time"""
+        court_id = self.request.query_params.get('court_id')
         date_str = self.request.query_params.get('date')
         queryset = TimeSlot.objects.none()
 
-        if facility_id and date_str:
+        if court_id and date_str:
             try:
-                facility = SportFacility.objects.get(id=facility_id)
+                court = Court.objects.get(id=court_id)
                 requested_date = parse_date(date_str)
                 if requested_date:
                     # Generate slots if they don't exist for this date
-                    if not TimeSlot.objects.filter(facility=facility, date=requested_date).exists():
-                        facility.generate_time_slots(for_date=requested_date)
+                    if not TimeSlot.objects.filter(court=court, date=requested_date).exists():
+                        court.generate_time_slots(for_date=requested_date)
 
-                    # Initial filter by facility and date
-                    queryset = TimeSlot.objects.filter(facility=facility, date=requested_date)
+                    # Initial filter by court and date
+                    queryset = TimeSlot.objects.filter(court=court, date=requested_date)
 
                     # If the requested date is today, filter out past slots
                     now = timezone.localtime()
                     if requested_date == now.date():
                         queryset = queryset.filter(start_time__gte=now.time())
 
-            except SportFacility.DoesNotExist:
+            except Court.DoesNotExist:
                 pass
 
         return queryset
@@ -54,15 +74,43 @@ class ReservationViewSet(viewsets.ModelViewSet):
             return Reservation.objects.all()
         return Reservation.objects.filter(user=self.request.user)
 
+    def perform_create(self, serializer):
+        # Check if user has reached the maximum number of reservations (2)
+        user_reservations = Reservation.objects.filter(
+            user=self.request.user,
+            is_cancelled=False
+        ).count()
+        
+        if user_reservations >= 2:
+            raise serializers.ValidationError("Maximum number of reservations (2) reached. Please cancel an existing reservation to make a new one.")
+        
+        serializer.save(user=self.request.user)
+
     def create(self, request, *args, **kwargs):
         """Create a new reservation and mark the time slot as unavailable"""
         time_slot_id = request.data.get('time_slot')
 
         try:
             time_slot = TimeSlot.objects.get(id=time_slot_id)
+            
+            # Check if the time slot is available
             if not time_slot.is_available:
                 return Response(
                     {"detail": "This time slot is already booked."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check for overlapping reservations
+            overlapping_reservations = Reservation.objects.filter(
+                user=request.user,
+                is_cancelled=False,
+                time_slot__date=time_slot.date,
+                time_slot__start_time=time_slot.start_time
+            ).exists()
+
+            if overlapping_reservations:
+                return Response(
+                    {"detail": "You already have a reservation for this time slot."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -78,6 +126,11 @@ class ReservationViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": "Time slot not found."},
                 status=status.HTTP_404_NOT_FOUND
+            )
+        except serializers.ValidationError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
     def destroy(self, request, *args, **kwargs):

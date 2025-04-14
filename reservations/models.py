@@ -15,6 +15,15 @@ class SportFacility(models.Model):
     def __str__(self):
         return self.name
 
+class Court(models.Model):
+    facility = models.ForeignKey(SportFacility, on_delete=models.CASCADE, related_name='courts')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_available = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.facility.name} - {self.name}"
+
     def generate_time_slots(self, for_date=None):
         """
         Generate time slots from 12 PM to 8 PM for the given date.
@@ -40,7 +49,7 @@ class SportFacility(models.Model):
                 # Round up to the next slot boundary
                 minutes_past_hour = current_time.minute
                 if minutes_past_hour > 0:
-                    minutes_to_next_slot = self.slot_duration - (minutes_past_hour % self.slot_duration)
+                    minutes_to_next_slot = self.facility.slot_duration - (minutes_past_hour % self.facility.slot_duration)
                     start_time_dt = current_time + timedelta(minutes=minutes_to_next_slot)
                     start_time = start_time_dt.time()
                 else:
@@ -50,13 +59,13 @@ class SportFacility(models.Model):
         current_time_dt = datetime.combine(for_date, start_time)
 
         while current_time_dt.time() < end_time_limit:
-            slot_end_time = (current_time_dt + timedelta(minutes=self.slot_duration)).time()
+            slot_end_time = (current_time_dt + timedelta(minutes=self.facility.slot_duration)).time()
             
             if slot_end_time > end_time_limit:
                 break
 
             slot, created = TimeSlot.objects.get_or_create(
-                facility=self,
+                court=self,
                 date=for_date,
                 start_time=current_time_dt.time(),
                 end_time=slot_end_time,
@@ -71,7 +80,7 @@ class SportFacility(models.Model):
                     slot.save()
 
             slots.append(slot)
-            current_time_dt += timedelta(minutes=self.slot_duration)
+            current_time_dt += timedelta(minutes=self.facility.slot_duration)
 
         return slots
 
@@ -79,19 +88,19 @@ class SportFacility(models.Model):
         """Remove time slots that are in the past"""
         current_time = timezone.localtime()
         TimeSlot.objects.filter(
-            facility=self,
+            court=self,
             date__lt=current_time.date()
         ).delete()
         
         # Clean today's past slots
         TimeSlot.objects.filter(
-            facility=self,
+            court=self,
             date=current_time.date(),
             end_time__lt=current_time.time()
         ).delete()
 
 class TimeSlot(models.Model):
-    facility = models.ForeignKey(SportFacility, on_delete=models.CASCADE, related_name='time_slots')
+    court = models.ForeignKey(Court, on_delete=models.CASCADE, related_name='time_slots')
     start_time = models.TimeField()
     end_time = models.TimeField()
     date = models.DateField()
@@ -99,10 +108,10 @@ class TimeSlot(models.Model):
 
     class Meta:
         ordering = ['date', 'start_time']
-        unique_together = ['facility', 'date', 'start_time']
+        unique_together = ['court', 'date', 'start_time']
 
     def __str__(self):
-        return f"{self.facility.name} - {self.date} {self.start_time}-{self.end_time}"
+        return f"{self.court.name} - {self.date} {self.start_time}-{self.end_time}"
 
     @property
     def is_past(self):
@@ -132,17 +141,5 @@ class Reservation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_cancelled = models.BooleanField(default=False)
 
-    class Meta:
-        unique_together = ['time_slot']  # One reservation per slot
-
     def __str__(self):
-        status = "CANCELLED" if self.is_cancelled else "ACTIVE"
-        return f"{self.user.username} - {self.time_slot} ({status})"
-
-    def cancel(self):
-        """Cancel this reservation by deleting it and updating the slot availability"""
-        time_slot = self.time_slot
-        # Delete the reservation
-        self.delete()
-        # Update the time slot availability
-        time_slot.update_availability()
+        return f"{self.user.username} - {self.time_slot}"

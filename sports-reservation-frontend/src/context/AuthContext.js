@@ -1,12 +1,13 @@
 // src/context/AuthContext.js
 import React, { createContext, useState, useEffect } from 'react';
-import { login, logout, register } from '../services/api';
+import { login as apiLogin, logout as apiLogout, register as apiRegister } from '../services/api';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -14,20 +15,24 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const loginUser = async (username, password) => {
+  const login = async (username, password) => {
     try {
-      await login(username, password);
-      setIsAuthenticated(true);
-      return true;
+      const response = await apiLogin(username, password);
+      if (response.key) {
+        localStorage.setItem('token', response.key);
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       return false;
     }
   };
 
-  const registerUser = async (userData) => {
+  const register = async (userData) => {
     try {
-      await register(userData);
+      await apiRegister(userData);
       return true;
     } catch (error) {
       console.error('Registration error:', error);
@@ -35,15 +40,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logoutUser = async () => {
+  const logout = async () => {
     try {
-      await logout();
-      setIsAuthenticated(false);
+      await apiLogout();
     } catch (error) {
       console.error('Logout error:', error);
-      // Still remove token and update state even if API call fails
+    } finally {
       localStorage.removeItem('token');
       setIsAuthenticated(false);
+      setUser(null);
     }
   };
 
@@ -51,9 +56,10 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       isAuthenticated,
       isLoading,
-      login: loginUser,
-      register: registerUser,
-      logout: logoutUser
+      user,
+      login,
+      register,
+      logout
     }}>
       {children}
     </AuthContext.Provider>
