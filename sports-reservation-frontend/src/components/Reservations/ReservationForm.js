@@ -28,7 +28,6 @@ const ReservationForm = () => {
         setLoading(false);
       }
     };
-
     fetchFacility();
   }, [facilityId]);
 
@@ -46,10 +45,7 @@ const ReservationForm = () => {
         setLoading(false);
       }
     };
-
-    if (facilityId && date) {
-      fetchTimeSlots();
-    }
+    if (facilityId && date) fetchTimeSlots();
   }, [facilityId, date]);
 
   const handleReservation = async () => {
@@ -76,82 +72,113 @@ const ReservationForm = () => {
   if (loading && !facility) return <div className="text-center my-5"><div className="spinner-border"></div></div>;
 
   return (
-    <div className="container mt-4">
-      <div className="row">
-        <div className="col-md-8 mx-auto">
-          <div className="card">
-            <div className="card-header bg-primary text-white">
-              <h4 className="mb-0">Reserve {facility?.name}</h4>
-            </div>
-            <div className="card-body">
-              {error && <div className="alert alert-danger">{error}</div>}
-              
-              <div className="mb-4">
-                <label className="form-label fw-bold">Select Date:</label>
-                <DatePicker
-                  selected={date}
-                  onChange={date => {
-                    setDate(date);
-                    setSelectedTimeSlot(null); // Reset selection when date changes
-                  }}
-                  className="form-control"
-                  minDate={new Date()}
-                  dateFormat="MMMM d, yyyy"
-                />
-              </div>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#001F3F', // deep dark blue
+      padding: '40px 20px',
+      color: 'white',
+      fontFamily: 'Segoe UI, sans-serif',
+    }}>
+      <h1 style={{ textAlign: 'center', fontSize: '42px', fontWeight: 'bold', color: '#FFDEB4', marginBottom: '30px' }}>
+        SportSched
+      </h1>
+      <div style={{
+        maxWidth: '800px',
+        margin: '0 auto',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        padding: '30px',
+        borderRadius: '20px',
+        boxShadow: '0 0 25px rgba(0, 0, 0, 0.3)',
+      }}>
+        <h2 style={{ fontSize: '24px', color: '#FFD580', marginBottom: '20px' }}>
+          Reserve {facility?.name}
+        </h2>
 
-              <div className="mb-4">
-                <label className="form-label fw-bold">Available Time Slots:</label>
-                {loading ? (
-                  <div className="text-center my-3"><div className="spinner-border spinner-border-sm"></div></div>
-                ) : timeSlots.length === 0 ? (
-                  <div className="alert alert-info">No available time slots for the selected date.</div>
-                ) : (
-                  <div className="row row-cols-1 row-cols-md-3 g-3 mt-2">
-                    {timeSlots.map(slot => (
-                      <div className="col" key={slot.id}>
-                        <div 
-                          className={`card h-100 ${selectedTimeSlot === slot.id ? 'border-primary' : ''} ${!slot.is_available ? 'bg-light' : ''}`}
-                          style={{ cursor: slot.is_available ? 'pointer' : 'not-allowed' }}
-                          onClick={() => slot.is_available && setSelectedTimeSlot(slot.id)}
-                        >
-                          <div className="card-body text-center">
-                            <h5 className="card-title">
-                              {new Date(`2000-01-01T${slot.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
-                              {' - '}
-                              {new Date(`2000-01-01T${slot.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </h5>
-                            {!slot.is_available && (
-                              <span className="badge bg-secondary">Already Booked</span>
-                            )}
-                            {selectedTimeSlot === slot.id && (
-                              <span className="badge bg-success mt-2">Selected</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+        {error && <div style={{ color: 'salmon', marginBottom: '15px' }}>{error}</div>}
 
-              <div className="d-grid">
-                <button 
-                  className="btn btn-primary btn-lg" 
-                  onClick={handleReservation}
-                  disabled={!selectedTimeSlot || submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2"></span>
-                      Processing...
-                    </>
-                  ) : 'Confirm Reservation'}
-                </button>
-              </div>
-            </div>
-          </div>
+        <div style={{ marginBottom: '25px' }}>
+          <label style={{ fontWeight: 'bold' }}>Select Date:</label><br />
+          <DatePicker
+            selected={date}
+            onChange={date => {
+              setDate(date);
+              setSelectedTimeSlot(null);
+            }}
+            className="form-control"
+            minDate={new Date()}
+            dateFormat="MMMM d, yyyy"
+          />
         </div>
+
+        <div style={{ marginBottom: '30px' }}>
+          <label style={{ fontWeight: 'bold' }}>Available Time Slots:</label>
+          {loading ? (
+            <div className="text-center my-3"><div className="spinner-border spinner-border-sm"></div></div>
+          ) : timeSlots.length === 0 ? (
+            <div style={{ color: '#ccc', marginTop: '10px' }}>No available time slots for the selected date.</div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '15px',
+              marginTop: '15px'
+            }}>
+              {timeSlots.map(slot => {
+                const isSelected = selectedTimeSlot === slot.id;
+                const isAvailable = slot.is_available;
+                return (
+                  <div
+                    key={slot.id}
+                    onClick={() => isAvailable && setSelectedTimeSlot(slot.id)}
+                    style={{
+                      padding: '15px',
+                      borderRadius: '10px',
+                      backgroundColor: isAvailable ? (isSelected ? '#FFDAB9' : '#FFE5B4') : '#444',
+                      color: isAvailable ? '#000' : '#bbb',
+                      cursor: isAvailable ? 'pointer' : 'not-allowed',
+                      textAlign: 'center',
+                      boxShadow: isSelected ? '0 0 10px #FFDAB9' : 'none',
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                  >
+                    <strong>
+                      {new Date(`2000-01-01T${slot.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
+                      {new Date(`2000-01-01T${slot.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </strong>
+                    {!isAvailable && <div style={{ fontSize: '0.8rem', marginTop: '5px' }}>Already Booked</div>}
+                    {isSelected && <div style={{ fontSize: '0.8rem', color: '#008000', marginTop: '5px' }}>Selected</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <button
+          className="btn btn-lg"
+          onClick={handleReservation}
+          disabled={!selectedTimeSlot || submitting}
+          style={{
+            width: '100%',
+            backgroundColor: '#FFB347',
+            color: '#000',
+            border: 'none',
+            padding: '12px',
+            borderRadius: '12px',
+            fontSize: '1.1rem',
+            fontWeight: 'bold',
+            boxShadow: '0 0 15px rgba(255, 179, 71, 0.5)',
+            transition: 'transform 0.2s ease-in-out',
+            transform: submitting ? 'scale(0.98)' : 'scale(1)',
+          }}
+        >
+          {submitting ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2"></span>
+              Processing...
+            </>
+          ) : 'Confirm Reservation'}
+        </button>
       </div>
     </div>
   );

@@ -1,90 +1,131 @@
 // src/components/Auth/Login.js
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import api from '../../services/api';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useContext(AuthContext);
 
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/facilities');
-    }
-  }, [isAuthenticated, navigate]);
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-    
     try {
-      const success = await login(username, password);
-      if (success) {
-        navigate('/facilities');
-      } else {
-        setError('Login failed. Please check your credentials.');
-      }
-    } catch (error) {
-      setError('An error occurred. Please try again.');
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+      const response = await api.post('auth/login/', formData);
+      localStorage.setItem('token', response.data.key);
+      navigate('/');
+    } catch (err) {
+      setError('Invalid username or password');
     }
   };
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h4 className="mb-0">Login</h4>
+    <div
+      style={{
+        display: 'flex',
+        height: '100vh',
+        backgroundImage: 'url("https://img.freepik.com/premium-photo/sports-background-advertising-sport-life-concept-generative-ai_1002555-984.jpg?w=2000")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
+    >
+      {/* Left Side */}
+      <div
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '40px'
+        }}
+      >
+        <h1 style={{ fontSize: '3rem', fontWeight: 'bold' }}>SportSched</h1>
+        <p style={{ fontSize: '1.2rem', maxWidth: '400px', textAlign: 'center' }}>
+          Book your favorite sports facilities instantly. Hassle-free and real-time!
+        </p>
+      </div>
+
+      {/* Right Side */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
+      >
+        <div style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.85)',
+          padding: '30px',
+          borderRadius: '10px',
+          width: '100%',
+          maxWidth: '400px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+        }}>
+          <h2 className="text-center mb-4">Login</h2>
+
+          {error && <div className="alert alert-danger">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <input
+                type="text"
+                name="username"
+                placeholder="Username"
+                className="form-control"
+                value={formData.username}
+                onChange={handleChange}
+                required
+              />
             </div>
-            <div className="card-body">
-              {error && <div className="alert alert-danger">{error}</div>}
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label htmlFor="username" className="form-label">Username</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="password" className="form-label">Password</label>
-                  <input
-                    type="password"
-                    className="form-control"
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="d-grid gap-2">
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Logging in...' : 'Login'}
-                  </button>
-                </div>
-              </form>
-              <div className="mt-3 text-center">
-                <p>Don't have an account? <Link to="/register">Register</Link></p>
-              </div>
+
+            <div className="mb-3">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                placeholder="Password"
+                className="form-control"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
             </div>
-          </div>
+
+            <div className="form-check mb-3">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="showPassword"
+                checked={showPassword}
+                onChange={() => setShowPassword(!showPassword)}
+              />
+              <label className="form-check-label" htmlFor="showPassword">
+                Show Password
+              </label>
+            </div>
+
+            <button type="submit" className="btn btn-success w-100 mb-3">
+              Login
+            </button>
+
+            <p className="text-center">
+              Don’t have an account?{' '}
+              <Link to="/register" style={{ textDecoration: 'none' }}>
+                Register
+              </Link>
+            </p>
+          </form>
         </div>
       </div>
     </div>
