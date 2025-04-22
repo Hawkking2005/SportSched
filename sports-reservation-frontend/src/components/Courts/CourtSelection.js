@@ -95,13 +95,12 @@ const CourtSelection = () => {
               >
                 <div className="card-body d-flex flex-column justify-content-between">
                   <div>
-                  <h5
-  className="card-title fw-bold mb-3"
-  style={{ color: '#dce3ff' }}
->
-  {court.name}
-</h5>
-
+                    <h5
+                      className="card-title fw-bold mb-3"
+                      style={{ color: '#dce3ff' }}
+                    >
+                      {court.name}
+                    </h5>
                     <p className="card-text" style={{ color: '#e0e0e0' }}>
                       {court.description || 'Standard court for your sport'}
                     </p>
@@ -165,4 +164,4 @@ const CourtSelection = () => {
   );
 };
 
-export default CourtSelection; 
+export default CourtSelection;

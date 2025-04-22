@@ -26,9 +26,7 @@ class Court(models.Model):
 
     def update_availability(self):
         """Update court availability based on its time slots"""
-        # Get today's date
         today = timezone.localtime().date()
-        # Check if there are any available time slots for today or future dates
         has_available_slots = self.time_slots.filter(
             date__gte=today,
             is_available=True
@@ -60,16 +58,19 @@ class Court(models.Model):
 
         # If it's today and we're past the opening time,
         # adjust start time to the next available slot
-        if for_date == now.date() and now.time() > start_time:
-            # Calculate minutes since midnight for current time
-            current_minutes = now.hour * 60 + now.minute
-            # Round up to next slot boundary
-            next_slot_minutes = ((current_minutes + slot_duration - 1) // slot_duration) * slot_duration
-            # If we're past all slots, return empty list
-            if next_slot_minutes >= end_time_limit.hour * 60 + end_time_limit.minute:
-                return []
-            # Convert minutes to time
-            start_time = time(next_slot_minutes // 60, next_slot_minutes % 60)
+        if for_date == now.date():
+            if now.time() >= end_time_limit:
+                return []  # Past closing time, don't create any slots
+            if now.time() > start_time:
+                # Calculate minutes since midnight for current time
+                current_minutes = now.hour * 60 + now.minute
+                # Round up to next slot boundary
+                next_slot_minutes = ((current_minutes + slot_duration - 1) // slot_duration) * slot_duration
+                # If we're past all slots, return empty list
+                if next_slot_minutes >= end_time_limit.hour * 60 + end_time_limit.minute:
+                    return []
+                # Convert minutes to time
+                start_time = time(next_slot_minutes // 60, next_slot_minutes % 60)
 
         slots = []
         current_time_dt = timezone.make_aware(datetime.combine(for_date, start_time))
@@ -95,10 +96,9 @@ class Court(models.Model):
 
             # Only update availability if the slot was just created
             if created:
-                # A slot should be unavailable only if it has reservations
+                # A slot should be unavailable if it has reservations or is in the past
                 has_reservations = slot.reservations.filter(is_cancelled=False).exists()
-                # For today's slots, also check if they're in the past
-                is_past = for_date == now.date() and current_time_dt <= now
+                is_past = current_time_dt <= now
                 
                 if has_reservations or is_past:
                     slot.is_available = False
@@ -139,7 +139,6 @@ class TimeSlot(models.Model):
         return f"{self.court.name} - {self.date} {self.start_time}-{self.end_time}"
 
     def save(self, *args, update_court=True, **kwargs):
-        # Prevent infinite recursion by adding a flag
         super().save(*args, **kwargs)
         if update_court:
             self.court.update_availability()
