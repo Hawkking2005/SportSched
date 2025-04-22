@@ -1,0 +1,10 @@
+Django>=5.1.7
+channels>=4.0.0
+djangorestframework>=3.14.0
+django-cors-headers>=4.3.1
+dj-rest-auth>=5.0.2
+django-allauth>=0.61.1
+psycopg2-binary>=2.9.9  # For PostgreSQL support
+gunicorn>=21.2.0  # For production deployment
+whitenoise>=6.6.0  # For serving static files
+python-dotenv>=1.0.1  # For environment variables 

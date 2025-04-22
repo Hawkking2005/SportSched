@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title text-center">Confirm Email Address</h2>
+                    
+                    {% if confirmation %}
+                        <p class="text-center">
+                            Please confirm that <strong>{{ confirmation.email_address.email }}</strong> is your email address.
+                        </p>
+                        
+                        <form method="post" action="{% url 'rest_verify_email' key=confirmation.key %}">
+                            {% csrf_token %}
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Confirm Email Address</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            This email confirmation link has expired or is invalid. 
+                            Please request a new confirmation email.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
