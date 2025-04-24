@@ -26,7 +26,7 @@ A full-stack web application for managing sports facility reservations. Built wi
 ```bash
 # Windows
 python -m venv venv
-.\venv\Scripts\activate
+venv\Scripts\activate
 
 # Mac/Linux
 python -m venv venv
